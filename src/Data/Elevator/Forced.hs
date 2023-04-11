@@ -21,7 +21,7 @@ data Strict a where
 
 {- The invariants of @ForcedWHNF@ and @ForcedNF@ depends on the constructors
 not being exported. The only way to construct these value is through the CBV
-functions.
+functions. Pattern matching is done via a unidirectional pattern.
 -}
 newtype ForcedWHNF a = ForcedOuter a
   deriving NoThunks via InspectHeap a
@@ -39,9 +39,9 @@ pattern ForcedNF a <- ForcedFull a
 returning.
 -}
 strictlyWHNF :: forall a. a -> Strict (ForcedWHNF a)
-strictlyWHNF a = Strict (ForcedOuter a) -- yeah, this is enough for WHNF.
+strictlyWHNF a = Strict (ForcedOuter a)
 
 {- | This is a CBV function. Evaluates the argument to NF before returning.
 -}
 strictlyNF :: forall a. NFData a => a -> Strict (ForcedNF a)
-strictlyNF a = rnf a `seq` Strict (ForcedFull a)
+strictlyNF a = Strict (ForcedFull (rnf a `seq` a))
