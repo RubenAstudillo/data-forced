@@ -1,5 +1,4 @@
-{-# Language ExplicitForAll, UnliftedDatatypes, PatternSynonyms #-}
-{-# Language DerivingVia, GADTSyntax #-}
+{-# Language ExplicitForAll, UnliftedDatatypes, PatternSynonyms, GADTSyntax #-}
 
 module Data.Elevator.Forced
   ( Strict(..)
@@ -13,7 +12,6 @@ module Data.Elevator.Forced
 
 import Data.Elevator ( UnliftedType, LiftedType )
 import Control.DeepSeq
-import NoThunks.Class
 
 type Strict :: LiftedType -> UnliftedType
 data Strict a where
@@ -24,13 +22,11 @@ not being exported. The only way to construct these value is through the CBV
 functions. Pattern matching is done via a unidirectional pattern.
 -}
 newtype ForcedWHNF a = ForcedOuter a
-  deriving NoThunks via InspectHeap a
 
 pattern ForcedWHNF :: forall a. a -> ForcedWHNF a
 pattern ForcedWHNF a <- ForcedOuter a
 
 newtype ForcedNF a = ForcedFull a
-  deriving NoThunks via InspectHeap a
 
 pattern ForcedNF :: forall a. a -> ForcedNF a
 pattern ForcedNF a <- ForcedFull a

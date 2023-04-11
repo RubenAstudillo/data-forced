@@ -1,7 +1,7 @@
 cabal-version:      3.4
 name:               data-elevator-forced
 version:            0.1.0.0
-synopsis:           Specify that lifted values were forces to WHNF or NF.
+synopsis:           Specify that lifted values were forced to WHNF or NF.
 -- description:
 license:            MIT
 license-file:       LICENSE
@@ -23,7 +23,6 @@ library
     -- other-extensions:
     build-depends:    base ^>=4.16.4.0,
                       data-elevator ^>=0.1.0.1,
-                      nothunks,
                       deepseq >= 1.4.6.0
     hs-source-dirs:   src
     default-language: GHC2021
@@ -39,7 +38,5 @@ test-suite data-elevator-forced-test
     build-depends:
         base ^>=4.16.4.0,
         containers,
-        nothunks,
         HUnit,
-        data-elevator,
         data-elevator-forced
