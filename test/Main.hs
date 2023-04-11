@@ -2,7 +2,7 @@
 module Main (main) where
 
 import qualified Data.Map.Lazy as ML
-import Data.Elevator.Forced
+import Data.Forced
 import Test.HUnit ( (~:), runTestTT, Counts, Test(TestList) )
 import Control.Exception (catch, ErrorCall (..))
 

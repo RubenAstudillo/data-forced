@@ -2,7 +2,7 @@
 , lib
 }:
 mkDerivation {
-  pname = "data-elevator-forced";
+  pname = "data-forced";
   version = "0.1.0.0";
   src = ./.;
   libraryHaskellDepends = [ base data-elevator deepseq ];

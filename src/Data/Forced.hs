@@ -1,6 +1,6 @@
 {-# Language ExplicitForAll, UnliftedDatatypes, PatternSynonyms, GADTSyntax #-}
 
-module Data.Elevator.Forced
+module Data.Forced
   ( Strict(..)
   , ForcedWHNF
   , pattern ForcedWHNF

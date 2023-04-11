@@ -15,19 +15,19 @@
     in
     {
       overlay = (system: final: prev: {
-        data-elevator-forced = final.haskellPackages.callPackage (import ./default.nix) {};
+        data-forced = final.haskellPackages.callPackage (import ./default.nix) {};
       });
       packages = forAllSystems (system: {
-        data-elevator-forced = nixpkgsFor.${system}.data-elevator-forced;
+        data-forced = nixpkgsFor.${system}.data-forced;
       });
-      defaultPackage = forAllSystems (system: self.packages.${system}.data-elevator-forced);
+      defaultPackage = forAllSystems (system: self.packages.${system}.data-forced);
       checks = self.packages;
       devShell = forAllSystems (system:
         let
           pkgs = nixpkgsFor.${system};
         in
           pkgs.haskellPackages.shellFor {
-            packages = p: [self.packages.${system}.data-elevator-forced];
+            packages = p: [self.packages.${system}.data-forced];
             withHoogle = true;
             buildInputs = with pkgs.haskellPackages; [
               haskell-language-server

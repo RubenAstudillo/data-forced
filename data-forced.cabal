@@ -1,5 +1,5 @@
 cabal-version:      3.4
-name:               data-elevator-forced
+name:               data-forced
 version:            0.1.0.0
 synopsis:           Specify that lifted values were forced to WHNF or NF.
 -- description:
@@ -18,16 +18,16 @@ common warnings
 
 library
     import:           warnings
-    exposed-modules:  Data.Elevator.Forced
+    exposed-modules:  Data.Forced
     -- other-modules:
     -- other-extensions:
     build-depends:    base ^>=4.16.4.0,
-                      data-elevator ^>=0.1.0.1,
+                      data-elevator >=0.1.0.0,
                       deepseq >= 1.4.6.0
     hs-source-dirs:   src
     default-language: GHC2021
 
-test-suite data-elevator-forced-test
+test-suite data-forced-test
     import:           warnings
     default-language: GHC2021
     -- other-modules:
@@ -39,4 +39,4 @@ test-suite data-elevator-forced-test
         base ^>=4.16.4.0,
         containers,
         HUnit,
-        data-elevator-forced
+        data-forced
