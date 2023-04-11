@@ -1,7 +1,9 @@
-{-# Language ExplicitForAll, PatternSynonyms, DerivingVia #-}
+{-# Language ExplicitForAll, UnliftedDatatypes, PatternSynonyms #-}
+{-# Language DerivingVia, GADTSyntax #-}
 
 module Data.Elevator.Forced
-  ( ForcedWHNF
+  ( Strict(..)
+  , ForcedWHNF
   , pattern ForcedWHNF
   , ForcedNF
   , pattern ForcedNF
@@ -9,9 +11,13 @@ module Data.Elevator.Forced
   , strictlyNF
   ) where
 
-import Data.Elevator
+import Data.Elevator ( UnliftedType, LiftedType )
 import Control.DeepSeq
 import NoThunks.Class
+
+type Strict :: LiftedType -> UnliftedType
+data Strict a where
+  Strict :: !a -> Strict a
 
 {- The invariants of @ForcedWHNF@ and @ForcedNF@ depends on the constructors
 not being exported. The only way to construct these value is through the CBV
@@ -29,11 +35,13 @@ newtype ForcedNF a = ForcedFull a
 pattern ForcedNF :: forall a. a -> ForcedNF a
 pattern ForcedNF a <- ForcedFull a
 
--- | This is a CBV function. Evaluates the argument to WHNF before
--- returning.
+{- | This is a CBV function. Evaluates the argument to WHNF before
+returning.
+-}
 strictlyWHNF :: forall a. a -> Strict (ForcedWHNF a)
-strictlyWHNF a = Strict (ForcedOuter a) -- Yeah, really.
+strictlyWHNF a = Strict (ForcedOuter a) -- yeah, this is enough for WHNF.
 
--- | This is a CBV function. Evaluates the argument to NF before returning.
+{- | This is a CBV function. Evaluates the argument to NF before returning.
+-}
 strictlyNF :: forall a. NFData a => a -> Strict (ForcedNF a)
 strictlyNF a = rnf a `seq` Strict (ForcedFull a)
