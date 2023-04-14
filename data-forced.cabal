@@ -32,7 +32,7 @@ description:
 -- extra-source-files:
 
 common warnings
-    ghc-options: -Wall
+    ghc-options: -Wall -Werror=unbanged-strict-patterns
 
 library
     import:           warnings
