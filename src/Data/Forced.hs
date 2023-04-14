@@ -5,18 +5,20 @@
 
 module Data.Forced (
     -- * How to use this library
-    -- ** Put 'ForcedWHNF' or 'ForcedNF' types on fields that need to have __no__ references when hold on a long lived data structure.
 
+    -- ** Add the @-Werror=unbanged-strict-patterns@ to ghc-options on cabal.
+
+    -- ** Put ForcedWHNF or ForcedNF types on fields that need to have __no__ references when hold on a long lived data structure.
     -- $howToUse1
 
     -- ** Use this common idiom whenever you need to obtain a forced value
-
     -- $howToUse2
 
     -- * The 'UnliftedType' calling convention (or how to avoid pitfalls)
     -- $unliftedCallingConvetion
 
     -- * Unlifted types
+
     -- | We need these so whenever we bound a strict computation, all the
     -- lazy values will be forced as needed.
     Pairy (..),
@@ -56,8 +58,8 @@ alive.
 {- $howToUse2
   1. Strictly @let@ bound on your current context the result of a call to
   'strictlyWHNF' or 'strictlyNF'. __This is the most important part.__
-  2. Use a lazy let to extract the underlying @'ForcedWHNF' a@ or
-  @'ForcedNF' a@ with the paired extractor.
+  2. Use a lazy let to extract the underlying @ForcedWHNF a@ or @ForcedNF a@
+  with the paired extractor.
   3. Store the previous result on the long lived data structure.
 
 The ideal code piece looks like this:
@@ -156,8 +158,9 @@ type Pairy :: UnliftedType -> LiftedType -> UnliftedType
 data Pairy (u :: UnliftedType) (l :: LiftedType) :: UnliftedType where
     Pairy :: u -> l -> Pairy u l
 
--- | A type synonym for the unlifted pair type synonym. It contains a strict
--- value and a way to extract it to a lazy/normal context.
+{- | A type synonym for the unlifted pair type synonym. It contains a strict
+ value and a way to extract it to a lazy/normal context.
+-}
 type StrictValueExtractor a = Pairy (Strict a) (Strict a -> a)
 
 -- | A wrapper for a lifted type that makes sure to have it evaluated.
@@ -165,8 +168,9 @@ type Strict :: LiftedType -> UnliftedType
 data Strict (a :: LiftedType) :: UnliftedType where
     Strict :: !a -> Strict a
 
--- | We don't ship the constructor of 'Strict' as it could be used to bypass
--- our pushes to bind values to a name.
+{- | We don't ship the constructor of 'Strict' as it could be used to bypass
+ our pushes to bind values to a name.
+-}
 extractStrict :: Strict a -> a
 extractStrict (Strict a) = a
 
@@ -177,17 +181,19 @@ not being exported. The only way to construct these value is through the CBV
 functions. Pattern matching is done via a unidirectional pattern.
 -}
 
--- | Contains a value of type @a@ that has been forced to __W__eak __H__ead
--- __N__ormal __F__orm. Constructor not exported (so no
--- 'Data.Coercible.coerce').
+{- | Contains a value of type @a@ that has been forced to __W__eak __H__ead
+ __N__ormal __F__orm. Constructor not exported (so no
+ 'Data.Coercible.coerce').
+-}
 newtype ForcedWHNF a = ForcedOuter a
 
 -- | The only way to extract the underlying value.
 pattern ForcedWHNF :: forall a. a -> ForcedWHNF a
 pattern ForcedWHNF a <- ForcedOuter a
 
--- | Contains a value of type @a@ that has been forced to __N__ormal
--- __F__orm. Constructor not exported (so no 'Data.Coercible.coerce').
+{- | Contains a value of type @a@ that has been forced to __N__ormal
+ __F__orm. Constructor not exported (so no 'Data.Coercible.coerce').
+-}
 newtype ForcedNF a = ForcedFull a
 
 -- | The only way to extract the underlying value.
