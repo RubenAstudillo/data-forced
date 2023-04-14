@@ -42,6 +42,10 @@ description:
   >   pure map1
 -- extra-source-files:
 
+source-repository head
+  type: git
+  location: https://github.com/RubenAstudillo/data-forced
+
 common warnings
     ghc-options: -Wall -Werror=unbanged-strict-patterns
 
