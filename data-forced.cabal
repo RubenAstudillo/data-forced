@@ -22,12 +22,15 @@ description:
   > -- No references on added leafs even though it is a lazy map.
   > basicEvent :: ML.Map Char (ForcedWHNF Int) -> IO (ML.Map Char (ForcedWHNF Int))
   > basicEvent map0 = do
-  >   let val0 :: Strict (ForcedWHNF Int)
+  >   let val0 :: StrictValueExtractor (ForcedWHNF Int)
   >       -- val0 = strictlyWHNF (error "argument evaluated") -- would fail
   >       val0 = strictlyWHNF (2 + 2)
   >       -- CBV function, 2 + 2 reduced before val0 is bound.
-  >       Strict val1 = val0  -- De-structure
+  >       val1 = case val0 of { Pairy val0' ext -> ext val0' } 
+  >       -- De-structure. Neccesary idiom to avoid a pitfall.
   >       map1 = ML.insert 'a' val1 map0
+  >       -- Even though map1 is a lazy map, the references to evaluate val1
+  >       -- were already freed.
   >   pure map1
 -- extra-source-files:
 
