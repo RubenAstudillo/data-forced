@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               data-forced
-version:            0.1.0.0
+version:            0.2.0.0
 synopsis:           Specify that lifted values were forced to WHNF or NF.
 license:            MIT
 license-file:       LICENSE
@@ -15,24 +15,35 @@ extra-doc-files:    CHANGELOG.md
 description:
   Alternative to bang patterns using CBV functions and unlifted data types.
   Tag your values to maintain the invariant that they were forced. Avoid
-  liveness leaks on long running data structures.
+  liveness leaks on long lived data structures.
+
+  Main tutorial on the only module. Here is a taste of how it will look
+  like.
 
   > import Data.Map.Lazy as ML -- Spine strict
-  > 
+  >
   > -- No references on added leafs even though it is a lazy map.
   > basicEvent :: ML.Map Char (ForcedWHNF Int) -> IO (ML.Map Char (ForcedWHNF Int))
   > basicEvent map0 = do
-  >   let val0 :: Strict (ForcedWHNF Int)
-  >       -- val0 = strictlyWHNF (error "argument evaluated") -- would fail
-  >       val0 = strictlyWHNF (2 + 2)
-  >       -- CBV function, 2 + 2 reduced before val0 is bound.
-  >       Strict val1 = val0  -- De-structure
-  >       map1 = ML.insert 'a' val1 map0
+  >   let
+  >     -- Step1: bind the strict value with a strict let. (2 + 2) reduced
+  >     -- before val0 is bound.
+  >     val0 :: StrictValueExtractor (ForcedWHNF Int)
+  >     val0 = strictlyWHNF (2 + 2)
+  >     -- val0 = strictlyWHNF (error "argument evaluated") -- would fail
+  >
+  >     -- Step2: extract the strict value to be use on lazy setting. A
+  >     -- neccesary idiom to avoid a pitfall.
+  >     val1 = case val0 of { Pairy val0' ext -> ext val0' }
+  >
+  >     -- Step3: Store the value free of references. Even though map1 is a lazy
+  >     -- map, the references to evaluate val1 were already freed.
+  >     map1 = ML.insert 'a' val1 map0
   >   pure map1
 -- extra-source-files:
 
 common warnings
-    ghc-options: -Wall
+    ghc-options: -Wall -Werror=unbanged-strict-patterns
 
 library
     import:           warnings

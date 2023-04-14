@@ -28,20 +28,20 @@ are provided so you can de-structure them.
 The **only** way to construct values of these types is via two CBVs
 functions:
 
-- `strictlyWHNF :: forall a. a -> Strict (ForcedWHNF a)`
-- `strictlyNF :: forall a. NFData a => a -> Strict (ForcedNF a)`
+- `strictlyWHNF :: forall a. a -> StrictValueExtractor (ForcedWHNF a)`
+- `strictlyNF :: forall a. NFData a => a -> StrictValueExtractor (ForcedNF a)`
 
-The `Strict` data type is inspired by its analog on
+The `StrictValueExtractor` data type is inspired by its analog on
 [`data-elevator`](https://hackage.haskell.org/package/data-elevator). It is
 a `UnliftedDatatype`, which means it cannot contain bottoms. The dynamic
 semantics of bound values of unlifted data types is that **before being
 bound, these are evaluated to WHNF**. It is a BangPattern you cannot forget!
 
-Once you obtain the `Strict (ForcedWHNF a)` value, you de-structurate it to
-obtain the *lifted* `ForceWHNF a` and store that. You are guaranteed that
-the references necessary to force it to WHNF are now free. Hopefully you
-will store it on a data structure that requires values to have been forced
-before like
+Once you obtain the `StrictValueExtractor (ForcedWHNF a)` value, you
+de-structurate it to obtain the *lifted* `ForceWHNF a` and store that. You
+are guaranteed that the references necessary to force it to WHNF are now
+free. Hopefully you will store it on a data structure that requires values
+to have been forced before like
 
 ``` haskell
     import Data.Map.Lazy
@@ -59,29 +59,31 @@ cannot forget to put them at the call site, parse not validate.
 ``` haskell
 
 import Data.Map.Lazy as ML -- Spine strict
+import Data.Forced
 
 -- No references on added leafs even though it is a lazy map.
 basicEvent :: ML.Map Char (ForcedWHNF Int) -> IO (ML.Map Char (ForcedWHNF Int))
 basicEvent map0 = do
-  let val0 :: Strict (ForcedWHNF Int)
+  let val0 :: StrictValueExtractor (ForcedWHNF Int)
       -- val0 = strictlyWHNF (error "argument evaluated") -- would fail
       val0 = strictlyWHNF (2 + 2)
       -- CBV function, 2 + 2 reduced before val0 is bound.
-      Strict val1 = val0  -- De-structure
+      val1 = case val0 of { Pairy v ext -> ext v } -- De-structure
       map1 = ML.insert 'a' val1 map0
   pure map1
 
 -- Same as before, but not references to values that were deleted and not forced.
 basicEventPromptDeletion
-  :: Strict (ML.Map Char (ForcedNF (Maybe Int)))
-  -> IO (Strict (ML.Map Char (ForcedNF (Maybe Int))))
+  :: ForcedWHNF (ML.Map Char (ForcedNF (Maybe Int)))
+  -> IO (ForceWHNF (ML.Map Char (ForcedNF (Maybe Int))))
 basicEventPromptDeletion (Strict map0) = do -- map0 evaluated before being bound.
-  let val0 :: Strict (ForcedNF (Maybe Int))
-      val0 = strictlyWHNF ((+1) <$> Just 28)
-      Strict val1 = val0  -- De-structure
-      map1 :: Strict (ML.Map Char (ForcedNF (Maybe Int)))
-      map1 = Strict (ML.insert 'a' val1 map0) -- forced when bound as map1
-  pure map1
+  let val0 :: StrictValueExtractor (ForcedNF (Maybe Int))
+      val0 = strictlyNF ((+1) <$> Just 28)
+      val1 = case val0 of { Pairy v ext -> ext v } -- De-structure
+      map1 :: StrictValueExtractor (ForcedWHNF (ML.Map Char (ForcedNF (Maybe Int))))
+      map1 = strictlyWHNF (ML.insert 'a' val1 map0) -- forced when bound as map1
+      map2 = case map1 of { Pairy m ext -> ext m } -- De-structure
+  pure map2
 ```
 
 # Acknowledgment
