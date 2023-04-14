@@ -1,7 +1,9 @@
 {-# Language ExplicitForAll, UnliftedDatatypes, PatternSynonyms, GADTSyntax #-}
 
 module Data.Forced
-  ( Strict(..)
+  ( Strict
+  , Pairy(..)
+  , StrictValueExtractor
   , ForcedWHNF
   , pattern ForcedWHNF
   , ForcedNF
@@ -16,6 +18,14 @@ import Control.DeepSeq
 type Strict :: LiftedType -> UnliftedType
 data Strict a where
   Strict :: !a -> Strict a
+
+extractStrict :: Strict a -> a
+extractStrict (Strict a) = a
+
+type Pairy :: UnliftedType -> LiftedType -> UnliftedType
+data Pairy u l = Pairy u l
+
+type StrictValueExtractor a = Pairy (Strict a) (Strict a -> a)
 
 {- The invariants of @ForcedWHNF@ and @ForcedNF@ depends on the constructors
 not being exported. The only way to construct these value is through the CBV
@@ -34,10 +44,10 @@ pattern ForcedNF a <- ForcedFull a
 {- | This is a CBV function. Evaluates the argument to WHNF before
 returning.
 -}
-strictlyWHNF :: forall a. a -> Strict (ForcedWHNF a)
-strictlyWHNF a = Strict (ForcedOuter a)
+strictlyWHNF :: forall a. a -> StrictValueExtractor (ForcedWHNF a)
+strictlyWHNF a = Pairy (Strict (ForcedOuter a)) extractStrict
 
 {- | This is a CBV function. Evaluates the argument to NF before returning.
 -}
-strictlyNF :: forall a. NFData a => a -> Strict (ForcedNF a)
-strictlyNF a = Strict (ForcedFull (rnf a `seq` a))
+strictlyNF :: forall a. NFData a => a -> StrictValueExtractor (ForcedNF a)
+strictlyNF a = Pairy (Strict (ForcedFull (rnf a `seq` a))) extractStrict
