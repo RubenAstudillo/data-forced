@@ -6,13 +6,14 @@
 module Data.Forced (
     -- * How to use this library
 
-    -- ** Add the @-Werror=unbanged-strict-patterns@ to ghc-options on cabal.
-
-    -- ** Put ForcedWHNF or ForcedNF types on fields that need to have __no__ references when hold on a long lived data structure.
+    -- ** Add a new flag on ghc-options
     -- $howToUse1
 
-    -- ** Use this common idiom whenever you need to obtain a forced value
+    -- ** Put ForcedWHNF or ForcedNF types on fields that need to have __no__ references when hold on a long lived data structure.
     -- $howToUse2
+
+    -- ** Use this common idiom whenever you need to obtain a forced value
+    -- $howToUse3
 
     -- * The 'UnliftedType' calling convention (or how to avoid pitfalls)
     -- $unliftedCallingConvetion
@@ -41,6 +42,22 @@ import Control.DeepSeq (NFData (rnf))
 import Data.Elevator (LiftedType, UnliftedType)
 
 {- $howToUse1
+Add this to your .cabal file It will save us from a pitfall.
+
+@
+common warnings
+    ghc-options: -Werror=unbanged-strict-patterns
+
+library
+  import: warnings
+  ...
+
+executable myAwesomeProgram
+  import: warnings
+@
+-}
+
+{- $howToUse2
 @
 import Data.Map.Lazy -- it is fine, really.
 import Data.Vector
@@ -55,7 +72,7 @@ This way it will be a type error to store a thunk that is keeping references
 alive.
 -}
 
-{- $howToUse2
+{- $howToUse3
   1. Strictly @let@ bound on your current context the result of a call to
   'strictlyWHNF' or 'strictlyNF'. __This is the most important part.__
   2. Use a lazy let to extract the underlying @ForcedWHNF a@ or @ForcedNF a@
@@ -99,8 +116,8 @@ than normal values. To achieve the correct evaluation level:
      sites. Specially if the use site is inside of a lazy function.
 
 The first kind of mistake is hard to trigger if we follow the first section
-rules. The library also steers you in the right direction. But a good
-practice is to include
+rules. The library also steers you in the right direction by recommending
+the following stanza.
 
 @
 common warnings
