@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-unused-binds #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Main (main) where
 
@@ -6,6 +7,7 @@ import Control.Exception (ErrorCall (..), catch)
 import Data.Forced
 import Data.Map.Lazy qualified as ML
 import Test.HUnit (Counts, Test (TestList), runTestTT, (~:))
+import Language.Haskell.TH (mkName)
 
 main :: IO Counts
 main = runTestTT tests
@@ -47,6 +49,14 @@ noThunksForWHNF2 = do
         map0 = ML.empty
         val1 = case strictlyWHNF (error "argument evaluated") of Pairy v ext -> ext v
         map1 = ML.insert 'a' val1 map0
+    pure ()
+
+noThunksForWHNF3 :: IO ()
+noThunksForWHNF3 = do
+    let map0 :: ML.Map Char (ForcedWHNF Int)
+        map0 = ML.empty
+    $( whnfBound (mkName "val1") (2 + 2 :: Int) )
+    let map1 = ML.insert 'a' val1 map0
     pure ()
 
 thunksForWHNFMaybe :: IO ()

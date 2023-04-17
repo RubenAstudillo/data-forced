@@ -56,7 +56,8 @@ library
     -- other-extensions:
     build-depends:    base ^>=4.16.4.0,
                       data-elevator >=0.1.0.0,
-                      deepseq >= 1.4.6.0
+                      deepseq >= 1.4.6.0,
+                      template-haskell >= 2.18
     hs-source-dirs:   src
     default-language: GHC2021
 
@@ -71,5 +72,6 @@ test-suite data-forced-test
     build-depends:
         base ^>=4.16.4.0,
         containers,
+        template-haskell,
         HUnit,
         data-forced

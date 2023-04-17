@@ -1,7 +1,11 @@
+{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE GADTSyntax #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE UnliftedDatatypes #-}
+{-# LANGUAGE UnliftedNewtypes #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Data.Forced (
     -- * How to use this library
@@ -36,10 +40,12 @@ module Data.Forced (
     -- * Call By Value functions
     strictlyWHNF,
     strictlyNF,
+    whnfBound
 ) where
 
 import Control.DeepSeq (NFData (rnf))
 import Data.Elevator (LiftedType, UnliftedType)
+import Language.Haskell.TH.Syntax hiding (Strict)
 
 {- $howToUse1
 Add this to your .cabal file It will save us from a pitfall.
@@ -175,6 +181,19 @@ type Pairy :: UnliftedType -> LiftedType -> UnliftedType
 data Pairy (u :: UnliftedType) (l :: LiftedType) :: UnliftedType where
     Pairy :: u -> l -> Pairy u l
 
+pairyName :: Name
+pairyName = mkNameG DataName "data-forced" "Data.Forced" "Pairy"
+
+instance (Lift u, Lift l) => Lift (Pairy u l) where
+  lift :: Quote m => Pairy u l -> m Exp
+  lift (Pairy val ext) =
+    (\ul ll -> ConE pairyName `AppE` ul `AppE` ll)
+      <$> lift val
+      <*> lift ext
+
+  liftTyped :: Quote m => Pairy u l -> Code m (Pairy u l)
+  liftTyped x = unsafeCodeCoerce (lift x)
+
 {- | A type synonym for the unlifted pair type synonym. It contains a strict
  value and a way to extract it to a lazy/normal context.
 -}
@@ -185,11 +204,31 @@ type Strict :: LiftedType -> UnliftedType
 data Strict (a :: LiftedType) :: UnliftedType where
     Strict :: !a -> Strict a
 
+strictName :: Name
+strictName = mkNameG DataName "data-forced" "Data.Forced" "Strict"
+
+instance Lift a => Lift (Strict a) where
+    lift :: Quote m => Strict a -> m Exp
+    lift (Strict a) = (ConE strictName `AppE`) <$> lift a
+
+    liftTyped :: Quote m => Strict a -> Code m (Strict a)
+    liftTyped x = unsafeCodeCoerce (lift x)
+
 {- | We don't ship the constructor of 'Strict' as it could be used to bypass
  our pushes to bind values to a name.
 -}
 extractStrict :: Strict a -> a
 extractStrict (Strict a) = a
+
+type StrictValueExtractor' :: LiftedType -> UnliftedType
+newtype StrictValueExtractor' a = SVE (Pairy (Strict a) (Strict a -> a))
+
+instance (Lift a) => Lift (StrictValueExtractor' a) where
+  lift :: Quote m => StrictValueExtractor' a -> m Exp
+  lift (SVE (Pairy val ext)) =
+    (\ul ll -> ConE pairyName `AppE` ul `AppE` ll)
+      <$> lift val
+      <*> lift ext
 
 {- $invariantNewtypes
 
@@ -203,6 +242,7 @@ functions. Pattern matching is done via a unidirectional pattern.
  'Data.Coercible.coerce').
 -}
 newtype ForcedWHNF a = ForcedOuter a
+  deriving (Lift)
 
 -- | The only way to extract the underlying value.
 pattern ForcedWHNF :: forall a. a -> ForcedWHNF a
@@ -212,6 +252,7 @@ pattern ForcedWHNF a <- ForcedOuter a
  __F__orm. Constructor not exported (so no 'Data.Coercible.coerce').
 -}
 newtype ForcedNF a = ForcedFull a
+  deriving (Lift)
 
 -- | The only way to extract the underlying value.
 pattern ForcedNF :: forall a. a -> ForcedNF a
@@ -226,3 +267,33 @@ strictlyWHNF a = Pairy (Strict (ForcedOuter a)) extractStrict
 -- | This is a CBV function. Evaluates the argument to NF before returning.
 strictlyNF :: forall a. NFData a => a -> StrictValueExtractor (ForcedNF a)
 strictlyNF a = Pairy (Strict (ForcedFull (rnf a `seq` a))) extractStrict
+
+whnfBound :: Lift a => Name -> a -> Q Exp
+whnfBound finalBoundName val = do
+  sBound <- newName "sBound"
+  valL <- lift (strictlyWHNF val)
+  let
+    sBoundStmt :: Dec
+    sBoundStmt = ValD (VarP sBound) (NormalB valL) []
+
+  innerValN <- newName "innerVal"
+  extractN <- newName "extract"
+  let
+    caseStmt :: Dec
+    caseStmt =
+      ValD (VarP finalBoundName)
+        (NormalB
+         (CaseE
+          (VarE sBound)
+          [
+            Match
+             (ConP pairyName [] [VarP innerValN, VarP extractN])
+             (NormalB (AppE (VarE innerValN) (VarE extractN)))
+             []
+          ]
+        ))
+        []
+
+  pure $
+   DoE Nothing
+    [LetS [ sBoundStmt, caseStmt], NoBindS (VarE finalBoundName)]
