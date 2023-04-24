@@ -20,26 +20,26 @@ description:
   Main tutorial on the only module. Here is a taste of how it will look
   like.
 
-  > import Data.Map.Lazy as ML -- Spine strict
-  >
-  > -- No references on added leafs even though it is a lazy map.
-  > basicEvent :: ML.Map Char (ForcedWHNF Int) -> IO (ML.Map Char (ForcedWHNF Int))
-  > basicEvent map0 = do
-  >   let
-  >     -- Step1: bind the strict value with a strict let. (2 + 2) reduced
-  >     -- before val0 is bound.
-  >     val0 :: StrictValueExtractor (ForcedWHNF Int)
-  >     val0 = strictlyWHNF (2 + 2)
-  >     -- val0 = strictlyWHNF (error "argument evaluated") -- would fail
-  >
-  >     -- Step2: extract the strict value to be use on lazy setting. A
-  >     -- neccesary idiom to avoid a pitfall.
-  >     val1 = case val0 of { Pairy val0' ext -> ext val0' }
-  >
-  >     -- Step3: Store the value free of references. Even though map1 is a lazy
-  >     -- map, the references to evaluate val1 were already freed.
-  >     map1 = ML.insert 'a' val1 map0
-  >   pure map1
+  > {-# Language QualifiedDo #-}
+  > 
+  > import qualified Data.Forced as DF
+  > import Data.Forced hiding (pure, fmap, (\<*\>), return, (>>=), (>>))
+  > import Data.Map.Lazy qualified as ML
+  > 
+  > noThunksForWHNF :: IO ()
+  > noThunksForWHNF = do
+  >   -- map0 actually evaluated on here.
+  >   let map0 :: Demand (ML.Map Char (ForcedWHNF Int))
+  >       map0 = DF.do
+  >         v <- demandWHNF (const (2 + 2) 'a')
+  >         DF.pure $ ML.insert 'a' v ML.empty
+  > 
+  >   map1 <- extractDemand map0
+  >   go (ML.lookup 'a' map1)
+  > 
+  > -- pattern matching for de-structuring, no construction allowed.
+  > go :: ForcedWHNF Int -> IO ()
+  > go (ForcedWHNF i) =  print i
 -- extra-source-files:
 
 source-repository head
@@ -47,7 +47,7 @@ source-repository head
   location: https://github.com/RubenAstudillo/data-forced
 
 common warnings
-    ghc-options: -Wall -Werror=unbanged-strict-patterns
+    ghc-options: -Wall
 
 library
     import:           warnings
