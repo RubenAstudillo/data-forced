@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               data-forced
-version:            0.2.0.0
+version:            0.3.0.0
 synopsis:           Specify that lifted values were forced to WHNF or NF.
 license:            MIT
 license-file:       LICENSE
